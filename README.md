@@ -1,6 +1,6 @@
 # copykillerkiller
 
-카피킬러 AI 생성검사 상세 결과를 Word 원고와 대조하고, 표시된 문단의 주장과 근거를 검토하는 Codex 스킬입니다. PDF에서 읽은 표시 위치를 DOCX 문단·표 셀과 연결하는 전처리 도구와 수정 사본의 내부 구조를 비교하는 도구를 포함합니다.
+작성자의 메모와 자료를 바탕으로 초안을 작성하고 기존 문서를 다듬는 Codex 스킬입니다. 카피킬러 AI 생성검사 상세 결과가 있으면 Word 원고와 대조할 수 있습니다. 보고서 대조, DOCX 주석 사본 생성, 문서 구조 비교 도구를 포함합니다.
 
 ## 설치
 
@@ -30,7 +30,9 @@ fi
 
 ## 사용 예시
 
-Codex 대화에 원고 DOCX와 상세 결과 PDF를 첨부하고 `$copykillerkiller`를 입력하세요. 판본이 여러 개면 후보를 함께 첨부하고, 과제 안내가 있다면 같이 제공하세요.
+Codex 대화에서 `$copykillerkiller`를 입력하고 작성할 문서의 목적과 독자, 메모나 기존 원고를 주세요. 검사 결과를 대조할 때는 상세 보고서와 원고 후보를 함께 첨부하세요. 분량이나 과제 지침이 있으면 같이 제공하세요.
+
+> `$copykillerkiller` 팀장에게 공유할 진행 보고 두 문장으로 써줘. 세 팀 중 두 팀에서 설치를 마쳤고, 나머지 한 팀은 권한 승인을 기다리고 있어. 완료일은 미정이야.
 
 > `$copykillerkiller` 최신 상세 보고서와 본문 DOCX를 대조해 표시 구간별 검토 목록을 만들어줘. 파일은 그대로 둬.
 
@@ -42,6 +44,7 @@ Codex 대화에 원고 DOCX와 상세 결과 PDF를 첨부하고 `$copykillerkil
 
 | 단계 | 스킬이 하는 일 |
 |---|---|
+| 초안과 편집 | 학술 글, 업무·기술 보고, 제안서, 공지·이메일, 에세이의 독자와 목적에 맞춰 작성합니다. 제공한 자료로 뒷받침할 수 있는 범위를 지킵니다. |
 | 검사본 대조 | 보고서의 표시를 원고 후보와 대조합니다. 검사 당시 원고와 현재 작업 대상은 따로 표시합니다. |
 | 근거 검토 | 표시 구간의 경계를 PDF에서 확인하고, 위치·문제·확인할 자료를 정리합니다. |
 | 수정 사본 검증 | 수정 요청이 있고 과제 규정이 허용되면 별도 사본을 만듭니다. 본문 텍스트 변화와 서식 차이를 비교해 주석 사본의 용도를 표시합니다. |
@@ -56,7 +59,7 @@ python3 copykillerkiller/scripts/create_review_copy.py "현재 원고.docx" --ex
 python3 copykillerkiller/scripts/verify_docx.py "원본.docx" "검토용 사본.docx"
 ```
 
-자세한 결과 해석과 예외 처리 방법은 [전처리 안내](copykillerkiller/references/preflight.md)와 [DOCX 검증 안내](copykillerkiller/references/docx-verification.md)에 있습니다.
+자세한 작성 흐름과 결과 해석은 [문서 유형별 글쓰기](copykillerkiller/references/writing-playbook.md), [전처리 안내](copykillerkiller/references/preflight.md), [DOCX 검증 안내](copykillerkiller/references/docx-verification.md)를 참고하세요.
 
 ## 통합 테스트
 
