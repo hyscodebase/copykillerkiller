@@ -191,27 +191,57 @@ def compare_draft(index, path, pages, markers):
     }
 
 
-def prepare(report_path, draft_paths):
+def assess_target(target_index, drafts, markers):
+    distinct = {}
+    for index, (_, anchor) in enumerate(markers):
+        if len(anchor) >= ANCHOR_MIN:
+            distinct.setdefault(anchor, index)
+    checks = list(distinct.values())
+    aligned = [
+        draft["draft_index"] for draft in drafts
+        if len(checks) >= 2 and all(draft["marker_matches"][i]["status"] == "unique" for i in checks)
+    ]
+    target_matches = drafts[target_index - 1]["marker_matches"]
+    if target_index in aligned:
+        status = "target_aligned" if len(aligned) == 1 else "shared_alignment"
+    elif aligned and any(target_matches[i]["status"] == "unmatched" for i in checks):
+        status = "other_draft_aligned"
+    else:
+        status = "unresolved"
+    return {
+        "draft_index": target_index, "status": status,
+        "aligned_draft_indices": aligned, "distinct_anchors_checked": len(checks),
+    }
+
+
+def prepare(report_path, draft_paths, target_index=None):
     pages = report_pages(load_report(report_path))
     summary = find_summary(pages)
     markers = list(marker_anchors(pages))
     normalized_pages = [compact(page) for page in pages]
-    return {
+    drafts = [compare_draft(index, path, normalized_pages, markers) for index, path in enumerate(draft_paths, 1)]
+    result = {
         "schema_version": 1, "report_pages": len(pages), "report_summary": summary,
         "blank_text_pages": [number for number, page in enumerate(normalized_pages, 1) if not page],
         "marker_candidates": [marker for marker, _ in markers],
-        "drafts": [compare_draft(index, path, normalized_pages, markers) for index, path in enumerate(draft_paths, 1)],
+        "drafts": drafts,
         "visual_review_required": True,
     }
+    if target_index is not None:
+        result["target_assessment"] = assess_target(target_index, drafts, markers)
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path, help="Copykiller PDF or UTF-8 layout text")
     parser.add_argument("drafts", type=Path, nargs="+", metavar="draft.docx", help="one or more DOCX candidates")
+    parser.add_argument("--target-index", type=int, help="one-based position of the requested working draft")
     args = parser.parse_args()
+    if args.target_index is not None and not 1 <= args.target_index <= len(args.drafts):
+        parser.error("--target-index must refer to an input draft")
     try:
-        result = prepare(args.report, args.drafts)
+        result = prepare(args.report, args.drafts, args.target_index)
     except OSError as exc:
         parser.exit(1, f"prepare_review: 입력을 읽지 못했습니다 ({exc.strerror or type(exc).__name__}).\n")
     except (BadZipFile, ET.ParseError, KeyError, RuntimeError, ValueError) as exc:

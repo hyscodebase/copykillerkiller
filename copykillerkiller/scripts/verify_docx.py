@@ -140,6 +140,16 @@ def protected_fingerprints(document, namespaces, local):
     ]
 
 
+def stored_body_text(document):
+    word = document.tag.rsplit("}", 1)[0] + "}"
+    text_tags = {word + "t", *(f"{{{ns}}}t" for ns in MATH_NS)}
+    body = document.find(word + "body")
+    return tuple(
+        "".join(node.text or "" for node in paragraph.iter() if node.tag in text_tags)
+        for paragraph in body.iter(word + "p")
+    )
+
+
 def compare(source_path, revision_path):
     if os.path.samefile(source_path, revision_path):
         raise ValueError("source and revision refer to the same file")
@@ -158,6 +168,7 @@ def compare(source_path, revision_path):
         "schema_version": 1,
         "source": source,
         "revision": revision,
+        "main_body_text_changed": stored_body_text(source_xml) != stored_body_text(revision_xml),
         "zip_parts": {
             "added": added,
             "removed": removed,
@@ -177,6 +188,8 @@ def compare(source_path, revision_path):
         "limitations": [
             "This is a structural preflight, not a pass/fail assessment or full OOXML validation.",
             "File SHA-256 includes ZIP metadata; ZIP part changes compare uncompressed bytes only.",
+            "Main body text compares stored Word and math text in paragraph order. It ignores comments, "
+            "run styling and other document parts. It does not resolve tracked changes or predict a scan score.",
             "Protected checks cover selected elements in word/document.xml, not every document feature. "
             "Element positions relative to unprotected prose and relationship targets are not compared.",
             "Complex fields are checked through fldChar markers and instrText instructions, not entire "
