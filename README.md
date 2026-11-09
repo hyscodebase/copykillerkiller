@@ -1,26 +1,60 @@
 # copykillerkiller
 
-카피킬러 AI 생성검사 상세 결과를 Word 원고와 대조하고, 표시된 문단을 자료와 작성자의 판단에 근거해 검토하는 Codex 스킬입니다. 보고서 판본 확인, 문단별 수정 이유, 원본을 보존하는 DOCX 검증 절차를 담았습니다.
+카피킬러 AI 생성검사 상세 결과를 Word 원고와 대조하고, 표시된 문단의 주장과 근거를 검토하는 Codex 스킬입니다. PDF에서 읽은 표시 위치를 DOCX 문단·표 셀과 연결하는 전처리 도구와 수정 사본의 내부 구조를 비교하는 도구를 포함합니다.
 
 ## 설치
 
-Git이 설치된 터미널에서 아래 명령을 실행하세요. GitHub 로그인 없이 내려받을 수 있습니다. Codex 스킬 폴더에 `copykillerkiller`가 이미 있다면 내용을 확인한 뒤 갱신하세요.
+Git이 설치된 터미널에서 내려받으세요. GitHub 로그인 없이 설치할 수 있습니다.
+
+```sh
+git clone https://github.com/hyscodebase/copykillerkiller.git && cd copykillerkiller
+```
+
+내려받은 저장소에서 스킬 폴더를 복사합니다. 이미 설치되어 있으면 경로를 알려주고 종료합니다.
 
 ```sh
 skill_dir="${CODEX_HOME:-$HOME/.codex}/skills/copykillerkiller"
-if [ ! -e "$skill_dir" ] && [ ! -L "$skill_dir" ]; then
-  git clone https://github.com/hyscodebase/copykillerkiller.git &&
-    mkdir -p "$(dirname "$skill_dir")" &&
-    cp -R copykillerkiller/copykillerkiller "$skill_dir"
+if [ -e "$skill_dir" ] || [ -L "$skill_dir" ]; then
+  printf '기존 설치를 확인하세요. %s\n' "$skill_dir"
+else
+  mkdir -p "$(dirname "$skill_dir")" &&
+    mkdir "$skill_dir" &&
+    cp -R copykillerkiller/. "$skill_dir/" &&
+    printf '설치 완료. %s\n' "$skill_dir"
 fi
 ```
 
+자동 전처리에는 Python 3.9 이상, PDF에서 텍스트를 추출하려면 Poppler의 `pdftotext`가 필요합니다. `python3 --version`, `pdftotext -v`로 확인할 수 있습니다. 자동 전처리를 실행할 수 없는 환경에서는 PDF 화면과 원고를 직접 비교하는 절차를 사용합니다.
+
+이미 설치했다면 내려받은 저장소에서 `git pull --ff-only`를 실행하고, 설치 폴더의 개인 수정이 있는지 확인한 뒤 새 `copykillerkiller` 폴더로 교체하세요. Codex에서 스킬을 찾지 못하면 새 대화를 열거나 설치한 `SKILL.md`를 지정해 주세요.
+
 ## 사용 예시
 
-원고와 상세 결과 PDF를 첨부하고 요청하세요.
+Codex 대화에 원고 DOCX와 상세 결과 PDF를 첨부하고 `$copykillerkiller`를 입력하세요. 판본이 여러 개면 후보를 함께 첨부하고, 과제 안내가 있다면 같이 제공하세요.
 
 > `$copykillerkiller` 최신 상세 보고서와 본문 DOCX를 대조해 표시 구간별 검토 목록을 만들어줘. 파일은 그대로 둬.
 
 > `$copykillerkiller` 과제 지침에 맞춰 표시 구간에서 근거가 약한 문단을 검토용 사본으로 다듬어줘. 표와 인용, AI 활용 고지는 보존해줘.
 
-스킬은 검사 결과를 읽는 데 활용합니다. 새 검사 점수는 해당 판본의 상세 결과에서 확인할 수 있습니다.
+> `$copykillerkiller` 두 상세 보고서의 검사본과 결과를 비교하고, 구간이 병합되거나 나뉜 곳도 알려줘.
+
+## 자동화 범위
+
+| 단계 | 스킬이 하는 일 |
+|---|---|
+| 검사본 대조 | 보고서에 나온 요약 수치와 표시 위치를 읽고, 원고 후보별로 일치하는 문단·표 셀을 찾습니다. |
+| 근거 검토 | 표시 구간의 경계를 PDF에서 확인하고, 위치·문제·확인할 자료를 정리합니다. |
+| 수정 사본 검증 | 수정 요청이 있고 과제 규정이 허용되면 별도 사본을 만들고, 파일 내부와 화면 배치를 확인합니다. |
+
+표시 범위의 정확한 끝, 페이지 사이 연결, 여러 판본의 공통 본문은 추가 확인이 필요합니다. 새 점수는 해당 판본의 새 검사 결과에서 확인합니다. 두 보조 도구는 원고를 로컬에서 읽어 JSON으로 결과를 출력합니다.
+
+저장소를 내려받은 폴더에서 직접 실행할 수도 있습니다.
+
+```sh
+python3 copykillerkiller/scripts/prepare_review.py "상세 결과.pdf" "원고.docx" "다른 판본.docx"
+python3 copykillerkiller/scripts/verify_docx.py "원본.docx" "검토용 사본.docx"
+```
+
+자세한 결과 해석과 예외 처리 방법은 [전처리 안내](copykillerkiller/references/preflight.md)와 [DOCX 검증 안내](copykillerkiller/references/docx-verification.md)에 있습니다.
+
+가상 보고서와 원고를 사용하는 테스트는 `python3 -B -m unittest discover -s tests`로 실행할 수 있습니다.
