@@ -96,6 +96,8 @@ def load_report(path):
         raise ValueError("pdftotext를 찾지 못했습니다. Poppler를 설치하거나 배치가 보존된 UTF-8 텍스트를 사용하세요.") from exc
     except subprocess.CalledProcessError as exc:
         raise ValueError("PDF 텍스트를 읽지 못했습니다. 파일 상태와 열기 권한을 확인하세요.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError("PDF 텍스트 추출 시간이 초과됐습니다.") from exc
     return result.stdout
 
 
@@ -210,7 +212,9 @@ def main():
     args = parser.parse_args()
     try:
         result = prepare(args.report, args.drafts)
-    except (BadZipFile, ET.ParseError, KeyError, OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as exc:
+    except OSError as exc:
+        parser.exit(1, f"prepare_review: 입력을 읽지 못했습니다 ({exc.strerror or type(exc).__name__}).\n")
+    except (BadZipFile, ET.ParseError, KeyError, RuntimeError, ValueError) as exc:
         parser.exit(1, f"prepare_review: {exc}\n")
     sys.stdout.buffer.write((json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
 

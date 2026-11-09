@@ -64,7 +64,7 @@ def parse_xml(data, label):
         raise ValueError("%s: invalid XML (%s)" % (label, error)) from error
 
 
-def read_docx(path):
+def read_docx(path, label):
     with path.open("rb") as source:
         file_hash = sha256_stream(source)
         source.seek(0)
@@ -72,29 +72,29 @@ def read_docx(path):
             members = [item for item in package.infolist() if not item.is_dir()]
             names = [item.filename for item in members]
             if len(names) != len(set(names)):
-                raise ValueError("%s: duplicate ZIP part names" % path)
+                raise ValueError("%s: duplicate ZIP part names" % label)
             missing = sorted(set(REQUIRED_PARTS) - set(names))
             if missing:
-                raise ValueError("%s: missing DOCX parts: %s" % (path, ", ".join(missing)))
+                raise ValueError("%s: missing DOCX parts: %s" % (label, ", ".join(missing)))
             hashes = {}
             for item in members:
                 with package.open(item) as part:
                     hashes[item.filename] = sha256_stream(part)
             roots = {
-                name: parse_xml(package.read(name), "%s:%s" % (path, name))
+                name: parse_xml(package.read(name), "%s:%s" % (label, name))
                 for name in REQUIRED_PARTS
             }
     content_types = roots["[Content_Types].xml"]
     if content_types.tag != "{%s}Types" % CONTENT_TYPES_NS:
-        raise ValueError("%s: invalid content-types root" % path)
+        raise ValueError("%s: invalid content-types root" % label)
     if not any(
         item.get("PartName") == "/" + DOCUMENT_PART
         and item.get("ContentType") == MAIN_CONTENT_TYPE
         for item in content_types.findall("{%s}Override" % CONTENT_TYPES_NS)
     ):
-        raise ValueError("%s: missing DOCX main-document content type" % path)
+        raise ValueError("%s: missing DOCX main-document content type" % label)
     if roots["_rels/.rels"].tag != "{%s}Relationships" % RELATIONSHIPS_NS:
-        raise ValueError("%s: invalid package-relationships root" % path)
+        raise ValueError("%s: invalid package-relationships root" % label)
     office_document_types = {
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
         "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument",
@@ -105,13 +105,13 @@ def read_docx(path):
         and posixpath.normpath(item.get("Target", "").lstrip("/")) == DOCUMENT_PART
         for item in roots["_rels/.rels"].findall("{%s}Relationship" % RELATIONSHIPS_NS)
     ):
-        raise ValueError("%s: missing main-document package relationship" % path)
+        raise ValueError("%s: missing main-document package relationship" % label)
     document = roots[DOCUMENT_PART]
     if document.tag not in {"{%s}document" % namespace for namespace in WORD_NS}:
-        raise ValueError("%s: invalid Word document root" % path)
+        raise ValueError("%s: invalid Word document root" % label)
     body_tag = document.tag.rsplit("}", 1)[0] + "}body"
     if document.find(body_tag) is None:
-        raise ValueError("%s: missing Word document body" % path)
+        raise ValueError("%s: missing Word document body" % label)
     return {"sha256": file_hash, "zip_part_count": len(hashes)}, hashes, document
 
 
@@ -143,8 +143,8 @@ def protected_fingerprints(document, namespaces, local):
 def compare(source_path, revision_path):
     if os.path.samefile(source_path, revision_path):
         raise ValueError("source and revision refer to the same file")
-    source, before, source_xml = read_docx(source_path)
-    revision, after, revision_xml = read_docx(revision_path)
+    source, before, source_xml = read_docx(source_path, "source")
+    revision, after, revision_xml = read_docx(revision_path, "revision")
     added = sorted(after.keys() - before.keys())
     removed = sorted(before.keys() - after.keys())
     common = before.keys() & after.keys()
@@ -197,7 +197,10 @@ def main():
     args = parser.parse_args()
     try:
         result = compare(args.source.resolve(strict=True), args.revision.resolve(strict=True))
-    except (OSError, ValueError, BadZipFile, RuntimeError, NotImplementedError) as error:
+    except OSError as error:
+        print("verify_docx: cannot read inputs (%s)" % (error.strerror or type(error).__name__), file=sys.stderr)
+        return 2
+    except (ValueError, BadZipFile, RuntimeError) as error:
         print("verify_docx: %s" % error, file=sys.stderr)
         return 2
     print(json.dumps(result, ensure_ascii=False, indent=2))

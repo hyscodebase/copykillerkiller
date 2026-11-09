@@ -119,6 +119,17 @@ class PreflightTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
 
+    def test_missing_file_errors_omit_personal_paths(self):
+        self.report.write_text(SUMMARY, encoding="utf-8")
+        make_docx(self.original, paragraph(SENTENCE))
+        for script, first in (("prepare_review.py", self.report), ("verify_docx.py", self.original)):
+            with self.subTest(script=script):
+                result = run_script(script, first, self.revised)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+                self.assertNotIn(self.revised.name, result.stderr)
+                self.assertNotIn(str(self.root), result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
