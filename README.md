@@ -4,12 +4,12 @@
 
 ## 설치
 
-저장소 접근 권한이 있는 GitHub 계정으로 저장소를 내려받으세요. Codex 스킬 폴더에 `copykillerkiller`가 이미 있다면 내용을 확인한 뒤 갱신하세요.
+Git이 설치된 터미널에서 아래 명령을 실행하세요. GitHub 로그인 없이 내려받을 수 있습니다. Codex 스킬 폴더에 `copykillerkiller`가 이미 있다면 내용을 확인한 뒤 갱신하세요.
 
 ```sh
 skill_dir="${CODEX_HOME:-$HOME/.codex}/skills/copykillerkiller"
 if [ ! -e "$skill_dir" ] && [ ! -L "$skill_dir" ]; then
-  gh repo clone hyscodebase/copykillerkiller &&
+  git clone https://github.com/hyscodebase/copykillerkiller.git &&
     mkdir -p "$(dirname "$skill_dir")" &&
     cp -R copykillerkiller/copykillerkiller "$skill_dir"
 fi
