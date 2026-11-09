@@ -46,15 +46,24 @@ Codex 대화에 원고 DOCX와 상세 결과 PDF를 첨부하고 `$copykillerkil
 | 근거 검토 | 표시 구간의 경계를 PDF에서 확인하고, 위치·문제·확인할 자료를 정리합니다. |
 | 수정 사본 검증 | 수정 요청이 있고 과제 규정이 허용되면 별도 사본을 만듭니다. 본문 텍스트 변화와 서식 차이를 비교해 주석 사본의 용도를 표시합니다. |
 
-표시 범위의 정확한 끝, 페이지 사이 연결, 여러 판본의 공통 본문은 추가 확인이 필요합니다. 새 점수는 해당 판본의 새 검사 결과에서 확인합니다. 두 보조 도구는 원고를 로컬에서 읽어 JSON으로 결과를 출력합니다.
+표시 범위의 정확한 끝, 페이지 사이 연결, 여러 판본의 공통 본문은 추가 확인이 필요합니다. 새 점수는 해당 판본의 새 검사 결과에서 확인합니다. 도구는 로컬에서 동작하며, 주석 사본을 만들 때는 지정된 작업 대상의 해시와 문단을 확인합니다.
 
 저장소를 내려받은 폴더에서 직접 실행할 수도 있습니다.
 
 ```sh
 python3 copykillerkiller/scripts/prepare_review.py --target-index 2 "상세 결과.pdf" "검사 당시 원고.docx" "현재 원고.docx"
+python3 copykillerkiller/scripts/create_review_copy.py "현재 원고.docx" --expected-sha256 "<작업 대상 SHA-256>" --notes "주석.json" --out "검토용 사본.docx"
 python3 copykillerkiller/scripts/verify_docx.py "원본.docx" "검토용 사본.docx"
 ```
 
 자세한 결과 해석과 예외 처리 방법은 [전처리 안내](copykillerkiller/references/preflight.md)와 [DOCX 검증 안내](copykillerkiller/references/docx-verification.md)에 있습니다.
 
-가상 보고서와 원고를 사용하는 테스트는 `python3 -B -m unittest discover -s tests`로 실행할 수 있습니다.
+## 통합 테스트
+
+`python3 -B -m unittest discover -s tests`는 임시 폴더에 가상 보고서와 이름이 같은 과거·현재 DOCX를 만듭니다. 과거 보고서가 있더라도 현재 원고로 주석 사본이 생성되는지, 원본과 문서 구조가 보존되는지 검증합니다.
+
+`soffice`, `pdftotext`, `pdftoppm`을 사용할 수 있는 환경에서는 다음 한 줄로 본문 페이지의 픽셀 비교까지 실행할 수 있습니다.
+
+```sh
+COPYKILLER_RENDER_TEST=1 python3 -B -m unittest discover -s tests
+```

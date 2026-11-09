@@ -27,7 +27,7 @@ def table(text):
     return f"<w:tbl><w:tr><w:tc>{paragraph(text)}</w:tc></w:tr></w:tbl>"
 
 
-def make_docx(path, body):
+def make_docx(path, body, *, root_attributes="", extra_parts=None):
     with ZipFile(path, "w") as package:
         package.writestr("[Content_Types].xml", """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -36,8 +36,10 @@ def make_docx(path, body):
         package.writestr("_rels/.rels", """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 </Relationships>""")
-        package.writestr("word/document.xml", f"""<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        package.writestr("word/document.xml", f"""<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"{root_attributes}>
 <w:body>{body}<w:sectPr/></w:body></w:document>""")
+        for name, data in (extra_parts or {}).items():
+            package.writestr(name, data)
 
 
 def run_script(script, *paths):
